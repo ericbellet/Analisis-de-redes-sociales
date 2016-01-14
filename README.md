@@ -1,5 +1,3 @@
-# analisis-de-redes-sociales-grupo-hej
-
 # [Analísis de Redes Sociales Grupo HEJ](https://github.com/ICDrepository/analisis-de-redes-sociales-grupo-hej)
 
 
