@@ -16,6 +16,7 @@
 * install.packages("reshape")
 * install.packages("ggplot2")
 * install.packages("lubridate")
+* install.packages("tm")
 * Editar config/global.dcf -> load_libraries: TRUE
 * Editar config/global.dcf -> munging: FALSE
 
@@ -37,13 +38,9 @@
 ## Integrantes
 
 **Eric Bellet**
-**Cédula: 24.463.483.**
-**Correo electrónico: ericbellet@hotmail.com**
+
 
 **Hillary Cañas**
-**Cédula: N/A**
-**Correo electrónico: N/A**
+
 
 **Jean García**
-**Cédula: 23.868.370.**
-**Correo electrónico: jeangarcia95@hotmail.com**
