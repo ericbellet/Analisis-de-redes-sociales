@@ -41,8 +41,8 @@
 **Correo electrónico: ericbellet@hotmail.com**
 
 **Hillary Cañas**
-**Cédula: 22.496.321**
-**Correo electrónico: Hillary_c94@hotmail.com**
+**Cédula: N/A**
+**Correo electrónico: N/A**
 
 **Jean García**
 **Cédula: 23.868.370.**
