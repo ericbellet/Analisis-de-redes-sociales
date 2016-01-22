@@ -1,0 +1,223 @@
+---
+title: "Reporte Analisis"
+output: html_document
+---
+
+####Bibliotecas incluidas.
+
+```{r eval=TRUE, message= FALSE, warning=FALSE}
+library(FactoMineR)
+library(rattle)
+library(cluster)
+```
+
+####Directorio y datos
+Seleccionamos el directorio donde vamos a trabajar e importamos los datos.  
+Incluimos las 6 palabras más repetidas en los tweets.
+```{r eval=TRUE, message= FALSE}
+setwd("C:/Users/Hillary/Documents/GitHub/analisis-de-redes-sociales-grupo-hej/data")
+loadedObj <- load("C:/Users/Hillary/Documents/GitHub/analisis-de-redes-sociales-grupo-hej/data/preprocess.RData")
+Datos=get(loadedObj)
+head(Datos)
+```
+
+####Hash Table
+```{r eval=TRUE, message= FALSE}
+#Calculamos la cantidad de palabras para crear el hash table.
+n<-length(Datos$palabra)
+#Creamos un hash table, cuya finalidad es tener todo el dataframe numerico y asi poder aplicar PCA.
+#Es decir cada palabra representa un numero. Ej: 1->votar, 2->chiabe, etc.
+IDpalabra = array(1:n)
+```
+
+```{r eval=TRUE, message= FALSE}
+#Creamos un nuevo dataframe con todos los valores numericos.
+newDatos = data.frame(IDpalabra,Datos$repetida)
+colnames(newDatos)[2] <- "repetida"
+#Colocamos nombres a las filas
+rownames(newDatos) <- Datos[,1]
+```
+
+#### Análisisde Componentes Principales 
+Dado que los datos que obtuvimos de Twitter ya limpiados y estandarizados es un conjunto de datos multidimensional,se decidió utilizar el Análisisde Componentes Principales para poder reducir las dimensiones del problema. Se plantea calcular las componentes principales, y escoger el número de estas que determinen más del 95% de la varianza, junto con el "Codo de Jambú" para demostrar que efectivamente se escogió el número óptimo de componentes principales. Con los componentes principales escogidos, y simplificando los datos a un menor espacio de dimensiones, se procederá a buscar patrones en los datos usando la técnica de k-means para separar los datos en clústeres (grupos), en nuestro caso particular el patrón es la frecuencia con la cual se repite, y luego poder agregarlos a un data frame a cada registro correspondiente. 
+```{r eval=TRUE, message= FALSE}
+#Llamamos al metodo usando la funcion prcomp de stats
+modelo = prcomp(newDatos)
+summary(modelo)
+biplot(modelo)
+```
+
+```{r eval=TRUE, message= FALSE}
+#Aplicamos PCA
+#Evaluar el valor del ncp.
+suppressMessages(library(FactoMineR))
+modelo <- PCA(newDatos, scale.unit = TRUE, ncp = 5, graph = FALSE)
+#AUTOVALORES.
+modelo$eig
+```
+
+
+```{r eval=TRUE, message= FALSE}
+#Graficamos el plano principal y el círculo de correlaciones por separado para las componentes principales 1 y 2
+par(mfrow = c(1, 2)) # dividimos la pantalla para recibir dos gráficos.
+plot(modelo, axes = c(1, 2), choix = "ind", col.ind = "green", new.plot = TRUE)
+plot(modelo, axes = c(1, 2), choix = "var", col.var = "blue", new.plot = TRUE)
+```
+Se aprecia que la relacion entre IDPalabra y repetidas es de menor grado o casi no se relacionan entre sí.
+Al graficar el plano principal obtenemos que a  simple vista no se pueden distinguir los grupos, sin embargo basándonos en el resultado del círculo de correlación la cantidad de grupos posibles podría ser 2 o 3. Tambien tenemos valores atípicos como lo es "cambio".
+
+```{r eval=TRUE, message= FALSE}
+# Cálculo de representatividad con los componentes 1 y 2
+cos2.ind <- (modelo$ind$cos2[, 1] + modelo$ind$cos2[, 2]) * 100
+```
+
+```{r eval=TRUE, message= FALSE}
+# Gráfica los individuos que tengan cos2 >= 0.7 (70%)
+par(mfrow = c(1, 1))
+plot(modelo, axes = c(1, 2), choix = "ind", col.ind = "red", new.plot = TRUE, select = "cos2 0.7")
+```
+
+```{r eval=TRUE, message= FALSE}
+# Cálculo de representatividad con los componentes 1 y 2
+cos2.var <- (modelo$var$cos2[, 1] + modelo$var$cos2[, 2]) * 100
+```
+
+```{r eval=TRUE, message= FALSE}
+#Se consideran mal representados los cos2 < 60%
+cos2.var <- (modelo$var$cos2[, 1] + modelo$var$cos2[, 2]) * 100
+```
+
+```{r eval=TRUE, message= FALSE}
+# Grafica las variables que tengan cos2 >= 0.9 (90%)
+plot(modelo, axes = c(1, 2), choix = "var", col.var = "blue", new.plot = TRUE, select = "cos2 0.9")
+```
+
+####Clustering
+```{r eval=TRUE, results="hide", message= FALSE}
+#Clustering sobre las componentes Principales
+#Desplegar los cluster 
+res.hcpc <- HCPC(modelo, nb.clust = -1, consol = TRUE, min = 3, max = 3, graph = FALSE)
+res.hcpc
+res.hcpc$data.clust
+``` 
+
+Graficando los cluster con el árbol clasificador.  
+```{r eval=TRUE, message= FALSE}
+plot(res.hcpc, axes=c(1,2), choice="tree", rect=TRUE,
+     draw.tree=TRUE, ind.names=TRUE, t.level="all", title=NULL,
+     new.plot=FALSE, max.plot=15, tree.barplot=TRUE,
+     centers.plot=FALSE)
+```
+
+Graficando los cluster con el árbol clasificador en 3D.  
+Aquí se observa con mayor facilidad la existencia de 3 grupos, la cual es la cantidad óptima de grupos para reprentar
+```{r eval=TRUE, message= FALSE}
+plot(res.hcpc, axes=c(1,2), choice="3D.map", rect=TRUE,
+     draw.tree=TRUE, ind.names=TRUE, t.level="all", title=NULL,
+     new.plot=FALSE, max.plot=15, tree.barplot=TRUE,
+     centers.plot=FALSE)
+```
+
+####Clasificación Jerárquica Ascendente
+Para poder hacer analisis utilizamos una muestra menor.
+```{r eval=TRUE, message= FALSE}
+CJA <- subset(newDatos, newDatos$repetida > 300)
+#Usando la agregación del salto mínimo
+modelo = hclust(dist(CJA), method = "single")
+#Resaltamos en rojo los grupos.
+plot(modelo)
+rect.hclust(modelo, k = 3, border = "red")
+```
+
+Le asignamos un grupo a cada palabra.  
+```{r eval=TRUE, message= FALSE}
+Grupo <- cutree(modelo, k = 3)
+NDatos <- cbind(CJA, Grupo)
+```
+
+Mostramos los centros de cada clasificación.  
+```{r eval=TRUE, message= FALSE}
+centros <- centers.hclust(CJA, modelo, nclust = 3, use.median = FALSE)
+centros
+```
+
+Gráfica de los centro para el cluster 1.  
+```{r eval=TRUE, message= FALSE}
+rownames(centros) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+barplot(centros[1, ], col = c(2, 3, 4, 5, 6, 7), las = 2)
+```
+
+Gráfica de los centro para el cluster 2.  
+```{r eval=TRUE, message= FALSE}
+barplot(centros[2, ], col = c(2, 3, 4, 5, 6, 7), las = 2)
+```
+
+Gráfica de los centro para el cluster 3.  
+```{r eval=TRUE, message= FALSE}
+barplot(centros[3, ], col = c(2, 3, 4, 5, 6, 7), las = 2)
+```
+
+Gráfica de los centro para todos clusters.  
+
+```{r eval=TRUE, message= FALSE}
+barplot(t(centros), beside = TRUE, col = c(2, 3, 4, 5, 6, 7))
+```
+
+####K-medias
+Se procedió a gráficar el k-means de los componentes principales con colores diferentes para cada grupo, y su centroide. Luego se creó un objeto con los valores de los grupos asignados a cada registro
+En K-Medias podemos analizar todo el dataset, ya que se puede graficar la nube de puntos de tal forma que se puede analizar con facilidad.
+
+Aplicamos Codo de Jambu para seleccionar el K
+```{r eval=TRUE, message= FALSE, warning=FALSE}
+plot(newDatos, pch = 19)
+InerciaIC = rep(0, 30)
+for (k in 1:30) {
+  grupos = kmeans(newDatos, k)
+  InerciaIC[k] = grupos$tot.withinss
+}
+plot(InerciaIC, col = rainbow(12), type = "b")
+```
+
+Podemos observar que aparentemente hay 3 grupos utilizando un conjuntos de palabras.
+
+```{r eval=TRUE,results="hide", message= FALSE}
+grupos <- kmeans(newDatos,3, iter.max = 100)
+
+grupos
+grupos$cluster
+grupos$centers
+grupos$totss  # Inercia Total
+grupos$withinss  # Inercia Intra-clases por grupo (una para cada grupo)
+grupos$tot.withinss  # Inercia Intra-clases
+grupos$betweenss  # inercia Inter-clases
+# Verificación del Teorema de Fisher
+grupos$totss == grupos$tot.withinss + grupos$betweenss
+grupos$size  # Tamaño de las clases
+```
+
+En el siguiente plot podemos observar los centroides y los distintos grupos.   
+
+```{r eval=TRUE, message= FALSE, warning=FALSE}
+plot(newDatos,pch = 19)
+points(grupos$centers, pch = 19, col = "yellow", cex = 3)
+points(newDatos, col = grupos$cluster + 1, pch = 19)
+```
+
+A continuación podemos se observa la interpretacion de los cluster por la comparación de sus centros  .   
+
+```{r eval=TRUE, message= FALSE}
+rownames(grupos$centers) <- c("Cluster 1", "Cluster 2", "Cluster 3")
+barplot(t(grupos$centers), beside = TRUE, col = heat.colors(5))
+```  
+
+Además se puede notar que las palabras más repetidas en los tweets, son aquellas del grupo 1.  
+Las cuales son:
+```{r eval=TRUE, message= FALSE}
+NDatos <- cbind(newDatos, Grupo = grupos$cluster)
+head(NDatos)
+```
+
+
+ 
+
+

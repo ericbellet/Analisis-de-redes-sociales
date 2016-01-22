@@ -1,0 +1,100 @@
+---
+title: "Reporte Preprocesamiento"
+output: html_document
+---
+
+####Bibliotecas incluidas.
+
+```{r eval=TRUE, message= FALSE, warning=FALSE}
+library('ProjectTemplate')  
+library('tm')  
+library(wordcloud)  
+library(ggplot2) 
+```
+
+####Directorio y datos
+Seleccionamos el directorio donde vamos a trabajar e importamos los datos.
+```{r eval=TRUE, message= FALSE}
+setwd("C:/Users/Hillary/Documents/GitHub/analisis-de-redes-sociales-grupo-hej")
+load.project()
+load(file = "C:/Users/Hillary/Documents/GitHub/analisis-de-redes-sociales-grupo-hej/data/tw.Rdata" )
+tweets <- tw$text
+```
+
+####Organización y limpieza de datos
+Después de analizar los datos, llegamos a la conclusión de que lo primero que debíamos hacer era deshacernos de ciertas variables.  
+El dataset contiene signos de puntuacion distintos formatos por lo cual hay que transformarlos para poder manejar los datos facilmente.
+```{r eval=TRUE}
+tweets = iconv(tweets, to="ASCII//TRANSLIT")
+#Separamos por espacio.
+tweets_text <- paste(tweets, collapse=" ")
+#Ahora creamos un corpus.
+#El corpus es el cuerpo (body) de texto sobre la cual realizaremos minería de datos.
+corpus <- Corpus(VectorSource(tweets_text), readerControl = list(language = "es"))
+```
+Se elimina de nuestra data, aquellas palabras que no son relevantes para nuestro estudio; así como los signos de puntuación,espacios y direcciones URL. Además se estandariza todo el texto en minúscula.
+
+```{r eval=TRUE}
+#Elimina los signos de puntuacion.
+corpus <- tm_map(corpus, removePunctuation)
+#Elimina los espacios.
+corpus <- tm_map(corpus, stripWhitespace)
+#Convierte todo en minusculas.
+corpus <- tm_map(corpus, content_transformer(tolower))
+#Elimina palabras vacías (stopwords) en español
+corpus <- tm_map(corpus, removeWords, stopwords("spanish"))
+#Elimina los URL.
+removeURL <- function(x) gsub("http[^[:space:]]*", "", x)
+corpus <- tm_map(corpus, content_transformer(removeURL))
+removeURL <- function(x) gsub("https[^[:space:]]*", "", x)
+corpus <- tm_map(corpus, content_transformer(removeURL))
+corpus <- tm_map(corpus, content_transformer(removeWords), c("htt...","ht...", "htt. ","ht.","6d","rt","retweet","q","d","i"))
+```
+
+####Document-term matrix.
+El document-term matrix es una matriz matemática que describe la frequencia con la que ocurren los términos en una coleccion de documentos. La fila corresponde a los documentos y la columna a las términos.
+
+```{r eval=TRUE}
+#Creamos el document-termn matrix
+dtm <- DocumentTermMatrix(corpus, control = list(wordLengths = c(1, Inf)))
+#Lo convertimos en una matriz
+dtm2 <- as.matrix(dtm)
+#Calculamos las mas frecuentes.
+frequency <- colSums(dtm2)
+#Ordenamos el vector por las palabras mas frecuentes.
+frequency <- sort(frequency, decreasing=TRUE)
+#head(frequency)
+term.freq <- frequency
+#Vamos a realizar el análisis con las palabras que esten repetidas una o más vez
+term.freq <- subset(term.freq, term.freq >=1) 
+#Creamos un data frame con los términos y su frecuencia
+df <- data.frame(term = names(term.freq), freq = term.freq)
+data <- data.frame(df$term, df$freq)
+#Nombres de las columnas de la tabla
+colnames(data)[1] <- "palabra"
+colnames(data)[2] <- "repetida"
+```
+
+####Gráficos.
+A continuación muestran unos gráficos trabajando un subconjunto de los datos.
+Se puede observar que las palabras con mayor frecuencia fueron; cambio, votar y venezuela.
+
+```{r echo=TRUE}
+term.freq2 <- subset(term.freq, term.freq >=150)
+df2 <- data.frame(term = names(term.freq2), freq = term.freq2)
+ggplot(df2, aes(x=term, y=freq)) + geom_bar(stat = "identity") + xlab("Terms") + ylab("Count") +coord_flip()
+```
+
+
+```{r echo=TRUE}
+words <- names(term.freq)
+wordcloud(words[1:100], term.freq[1:100],colors=rainbow(30))
+```
+
+####Guardamos la data 
+Para su análisis posterior guardamos la data preprocesada en el siguiente archivo:
+```
+save (data,file="data/preprocess.RData")
+```
+
+
