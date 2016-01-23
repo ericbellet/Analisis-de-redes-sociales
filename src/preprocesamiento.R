@@ -2,10 +2,7 @@ library('ProjectTemplate')
 library('tm')
 library(wordcloud)
 library(ggplot2)
-#Integrantes:
-#Eric Bellet
-#Hillary Cañas
-#Jean García
+
 
 
 #CAMBIAR DIRECCION
@@ -16,7 +13,7 @@ load.project()
 
 #Data Import
 #CAMBIAR DIRECCION
-#load(file ="C:/Users/Wilmer//data/tw.Rdata")
+#load(file ="C:/Users/Wilmer/")
 load(file = "C:/Users/EricBellet/Desktop/Asignacion1/data/tw.Rdata" )
 
 #Cargamos los tweets
@@ -65,7 +62,19 @@ corpus <- tm_map(corpus, content_transformer(removeWords), c("htt...","ht...", "
 #Segun estas funciones hacen lo mismo, lematizan. Pero lo hacen mal, leyendo blogs dicen que no hay nada que en R que lematice bien.
 #corpus <- tm_map(corpus, stemDocument)
 #corpus <- wordStem(corpus, "spanish")
-
+#lematiza <- function( frase ){
+#palabra <- gsub( " ", "+", frase )
+#base.url <- paste( 
+#  "http://cartago.lllf.uam.es/grampal/grampal.cgi?m=etiqueta&e=", 
+#  palabra, sep = "" )
+#tmp <- readLines( base.url, encoding = 'utf8' )
+#tmp <- iconv( tmp, "utf-8" )
+#tmp <- gsub( "&nbsp;", " ", tmp )
+#tmp <- readHTMLTable( tmp )
+#tmp <- as.character( tmp[[1]]$V3 )
+#tmp <- do.call( rbind, strsplit( tmp, " " ) )[,4]
+#tmp
+#}
 
 #-------------------------------------------
 #Creamos el document-term matrix.
